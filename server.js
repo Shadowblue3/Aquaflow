@@ -9,7 +9,7 @@ const https = require('https');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const FLASK_URL = process.env.FLASK_URL || 'https://aquaflow-python-backend.onrender.com';
+const FLASK_URL = process.env.FLASK_URL || 'https://aquaflow-2-0-backend-1.onrender.com';
 const mongoose = require('mongoose');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
@@ -440,28 +440,116 @@ app.get('/outbreak-prediction', requireLogin, async (req, res) => {
     });
   }
 
-  async function fetchFromFlask() {
-    const base = (process.env.FLASK_URL || FLASK_URL || 'http://127.0.0.1:5000').replace(/\/+$/, '');
-    const url = base + '/api/predict';
-    return await new Promise((resolve) => {
-      const lib = url.startsWith('https') ? https : http;
-      const req = lib.get(url, { headers: { 'Accept': 'application/json' }, timeout: 20000 }, (resp) => {
-        let data = '';
-        resp.on('data', (chunk) => { data += chunk.toString(); });
-        resp.on('end', () => {
-          try {
-            const json = JSON.parse(data);
-            resolve(json && typeof json === 'object' ? json : { redzones: [], mapPath: null });
-          } catch (e) {
-            console.error('Flask JSON parse error:', e);
-            resolve({ redzones: [], mapPath: null });
-          }
-        });
+  // Replace the fetchFromFlask function in your server.js with this improved version
+
+async function fetchFromFlask() {
+  const base = (process.env.FLASK_URL || FLASK_URL || 'http://127.0.0.1:5000').replace(/\/+$/, '');
+  const url = base + '/api/predict';
+  
+  return await new Promise((resolve) => {
+    const lib = url.startsWith('https') ? https : http;
+    
+    const options = {
+      timeout: 30000, // Increased timeout to 30 seconds
+      headers: { 
+        'Accept': 'application/json',
+        'Connection': 'keep-alive',
+        'User-Agent': 'AquaFlow-Node-Client/1.0'
+      }
+    };
+    
+    let timeoutId;
+    let requestAborted = false;
+    
+    const req = lib.get(url, options, (resp) => {
+      // Clear timeout once we get a response
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      
+      let data = '';
+      
+      resp.on('data', (chunk) => { 
+        data += chunk.toString(); 
       });
-      req.on('error', (err) => { console.error('Flask request error:', err); resolve({ redzones: [], mapPath: null }); });
-      req.on('timeout', () => { try { req.destroy(); } catch(_){} resolve({ redzones: [], mapPath: null }); });
+      
+      resp.on('end', () => {
+        if (requestAborted) return;
+        
+        try {
+          const json = JSON.parse(data);
+          resolve(json && typeof json === 'object' ? json : { redzones: [], mapPath: null });
+        } catch (e) {
+          console.error('Flask JSON parse error:', e);
+          console.error('Raw response:', data);
+          resolve({ redzones: [], mapPath: null });
+        }
+      });
+      
+      resp.on('error', (err) => {
+        if (requestAborted) return;
+        console.error('Flask response error:', err);
+        resolve({ redzones: [], mapPath: null });
+      });
+      
+      resp.on('close', () => {
+        if (requestAborted) return;
+        if (!data) {
+          console.error('Flask connection closed without data');
+          resolve({ redzones: [], mapPath: null });
+        }
+      });
     });
-  }
+    
+    // Set up timeout handler
+    timeoutId = setTimeout(() => {
+      requestAborted = true;
+      console.error('Flask request timeout after 30 seconds');
+      try { 
+        req.destroy(); 
+      } catch(e) {
+        console.error('Error destroying request:', e);
+      }
+      resolve({ redzones: [], mapPath: null });
+    }, 30000);
+    
+    req.on('error', (err) => {
+      if (requestAborted) return;
+      requestAborted = true;
+      
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      
+      console.error('Flask request error:', err);
+      
+      // Handle specific error types
+      if (err.code === 'ECONNRESET' || err.code === 'ENOTFOUND' || err.code === 'ETIMEDOUT') {
+        console.error('Connection issue with Flask server. Please check if Flask is running and accessible.');
+      }
+      
+      resolve({ redzones: [], mapPath: null });
+    });
+    
+    req.on('timeout', () => {
+      if (requestAborted) return;
+      requestAborted = true;
+      
+      console.error('Flask request timeout');
+      try { 
+        req.destroy(); 
+      } catch(e) {
+        console.error('Error destroying timed out request:', e);
+      }
+      resolve({ redzones: [], mapPath: null });
+    });
+    
+    // Set socket timeout
+    req.setTimeout(30000);
+    
+    req.end();
+  });
+}
 
   const payload = await fetchFromFlask();
 
