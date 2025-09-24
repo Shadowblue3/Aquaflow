@@ -9,6 +9,7 @@ const https = require('https');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '0.0.0.0';
 const FLASK_URL = process.env.FLASK_URL || 'https://aquaflow-2-0-backend-1.onrender.com';
 const mongoose = require('mongoose');
 const session = require('express-session');
@@ -19,6 +20,7 @@ const MASTER_ID = process.env.MASTER_ID || 'MSTR-0001';
 const MASTER_PASSWORD = process.env.MASTER_PASSWORD || 'Master@1234';
 
 // Middleware
+app.set('trust proxy', 1);
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
@@ -27,7 +29,11 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'dev_secret',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 2 * 60 * 60 * 1000 } // 2 hours
+  cookie: {
+    maxAge: 2 * 60 * 60 * 1000, // 2 hours
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production'
+  }
 }));
 
 // Set EJS as template engine
@@ -140,6 +146,10 @@ app.get('/', (req, res) => {
   const language = req.query.lang || 'en';
   res.render('landing', { layout: false, activeTab: 'landing' });
 });
+
+// Health checks
+app.get('/healthz', (req, res) => res.status(200).send('ok'));
+app.get('/health', (req, res) => res.json({ ok: true }));
 
 app.get('/dashboard', requireLogin, async (req, res) => {
   try {
@@ -843,8 +853,15 @@ app.get('/logout', (req, res) => {
   });
 });
 
+// Global error handlers
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled Rejection:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
 // Start server
-app.listen(PORT, () => {
-  console.log(`Smart Health Surveillance System running on port ${PORT}`);
-  console.log(`Visit: http://localhost:${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`Smart Health Surveillance System running on http://${HOST}:${PORT}`);
 });
