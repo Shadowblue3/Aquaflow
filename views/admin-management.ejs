@@ -1,9 +1,24 @@
+<style>
+  .admin-table{
+    background-color: white;
+    border: 2px solid #2563eb;
+    padding: 20px;
+    border-radius: 10px;
+  }
+
+  .create-admin{
+    background-color: white;
+    border: 2px solid rgb(207, 205, 205);
+    border-radius: 20px;
+  }
+</style>
+
 <div class="post-head">
   <h2 class="page-title">Admin Management</h2>
   <p class="subtitle">Create new admins and view existing admins. Only visible to Master.</p>
 </div>
 
-<section class="card" style="padding:1rem;margin-bottom:1rem;">
+<section class="card create-admin" style="padding:1rem;margin-bottom:1rem;">
   <h3 style="margin:0 0 0.75rem 0;">Create Admin</h3>
   <form id="createAdminForm" class="form-grid" onsubmit="return false;">
     <div class="form-row">
@@ -42,7 +57,7 @@
   <div id="adminCreateMsg" style="margin-top:0.75rem;font-size:0.9rem;"></div>
 </section>
 
-<section class="card" style="padding:1rem;">
+<section class="card admin-table">
   <h3 style="margin:0 0 0.75rem 0;">Existing Admins</h3>
   <div class="table-responsive">
     <table class="table" style="width:100%;border-collapse:collapse;">

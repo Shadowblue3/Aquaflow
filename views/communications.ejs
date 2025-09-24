@@ -1,3 +1,26 @@
+<style>
+  .post-threads{
+     padding-bottom: 20px;
+  }
+  .comments h4{
+    padding: 20px;
+  }
+  .comment{
+    padding-left: 20px;
+  }
+  .comment-form{
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+      gap: 10px;
+  }
+  .comment-input{
+    padding: 10px;
+    flex: 1;
+  }
+</style>
 <div class="post-head">
   <h2 class="page-title">Communications Board</h2>
   <p class="subtitle">Share updates about water bodies and disease outbreaks. This is a threaded board (not real-time).</p>
@@ -37,11 +60,11 @@
   <div id="threadMsg" style="margin-top:0.75rem;font-size:0.9rem;"></div>
 </section>
 
-<section class="card" style="padding:1rem;">
+<section class="card post-threads">
   <h3 style="margin:0 0 0.75rem 0;">Recent Threads</h3>
   <div id="threadsList">
     <% (threads || []).forEach(function(t){ %>
-      <article class="post-card" data-id="<%= t._id %>">
+      <article style = "margin: 15px" class="post-card" data-id="<%= t._id %>">
         <header class="post-card-header">
           <div class="title-wrap">
             <h2 class="post-title"><%= t.title %></h2>
@@ -62,10 +85,10 @@
           </p>
         </section>
         <section class="comments">
-          <h4 style="margin:0.5rem 0;">Comments</h4>
+          <h4>Comments</h4>
           <div class="comments-list">
             <% (t.comments || []).forEach(function(c){ %>
-              <div class="comment" style="padding:0.5rem 0;border-bottom:1px solid #f3f4f6;">
+              <div class="comment">
                 <div style="font-size:0.9rem;color:#4b5563;">
                   <i class="fas fa-user-shield"></i>
                   <strong><%= c.authorName || (c.authorRole === 'master' ? 'Master' : 'Official') %></strong>
@@ -75,8 +98,8 @@
               </div>
             <% }) %>
           </div>
-          <div class="comment-form" style="margin-top:0.5rem;display:flex;gap:0.5rem;">
-            <input type="text" class="comment-input" placeholder="Add a comment" style="flex:1;" />
+          <div class="comment-form">
+            <input type="text" class="comment-input" placeholder="Add a comment" />
             <button class="btn add-comment">Comment</button>
           </div>
         </section>
