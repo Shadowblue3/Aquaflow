@@ -8,7 +8,7 @@ const officialSchema = new Schema({
   state: String,
   district: String,
   department: String,
-  id: Number,
+  id: String,
   phone: Number,
   password: String,
   confirmPassword: String,

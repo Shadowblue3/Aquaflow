@@ -75,6 +75,29 @@
                     <i class="fas fa-tint"></i>
                     <span>Water Quality</span>
                 </a>
+                <a href="/communications?lang=<%= language %>" class="nav-item <%= activeTab === 'communications' ? 'active' : '' %>">
+                    <i class="fas fa-comments"></i>
+                    <span>Communications</span>
+                </a>
+                <% } %>
+
+                <% if (user && user.role === 'master') { %>
+                <a href="/community-post?lang=<%= language %>" class="nav-item <%= activeTab === 'community-post' ? 'active' : '' %>">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span>Manage Posts</span>
+                </a>
+                <a href="/water-quality?lang=<%= language %>" class="nav-item <%= activeTab === 'water' ? 'active' : '' %>">
+                    <i class="fas fa-tint"></i>
+                    <span>Water Quality</span>
+                </a>
+                <a href="/communications?lang=<%= language %>" class="nav-item <%= activeTab === 'communications' ? 'active' : '' %>">
+                    <i class="fas fa-comments"></i>
+                    <span>Communications</span>
+                </a>
+                <a href="/admin-management?lang=<%= language %>" class="nav-item <%= activeTab === 'admin-management' ? 'active' : '' %>">
+                    <i class="fas fa-user-gear"></i>
+                    <span>Admin Management</span>
+                </a>
                 <% } %>
             </div>
         </div>

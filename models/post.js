@@ -12,6 +12,7 @@ const postSchema = new Schema({
     resolved: { type: Boolean, default: false },
     latitude: Number,
     longitude: Number,
+    assignedOfficerId: { type: String, default: null },
 });
 
 const postModel = mongoose.model('posts', postSchema)

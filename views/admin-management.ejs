@@ -1,0 +1,122 @@
+<div class="post-head">
+  <h2 class="page-title">Admin Management</h2>
+  <p class="subtitle">Create new admins and view existing admins. Only visible to Master.</p>
+</div>
+
+<section class="card" style="padding:1rem;margin-bottom:1rem;">
+  <h3 style="margin:0 0 0.75rem 0;">Create Admin</h3>
+  <form id="createAdminForm" class="form-grid" onsubmit="return false;">
+    <div class="form-row">
+      <label>Full Name</label>
+      <input type="text" name="fullName" required />
+    </div>
+    <div class="form-row">
+      <label>Email</label>
+      <input type="email" name="email" required />
+    </div>
+    <div class="form-row">
+      <label>Mobile</label>
+      <input type="tel" name="mobile" />
+    </div>
+    <div class="form-row">
+      <label>Password</label>
+      <input type="password" name="password" required />
+    </div>
+    <div class="form-row">
+      <label>State</label>
+      <input type="text" name="state" />
+    </div>
+    <div class="form-row">
+      <label>District</label>
+      <input type="text" name="district" />
+    </div>
+    <div class="form-row">
+      <label>Department</label>
+      <input type="text" name="department" />
+    </div>
+
+    <div class="form-actions">
+      <button class="btn" id="createAdminBtn" type="submit">Create Admin</button>
+    </div>
+  </form>
+  <div id="adminCreateMsg" style="margin-top:0.75rem;font-size:0.9rem;"></div>
+</section>
+
+<section class="card" style="padding:1rem;">
+  <h3 style="margin:0 0 0.75rem 0;">Existing Admins</h3>
+  <div class="table-responsive">
+    <table class="table" style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr>
+          <th style="text-align:left;padding:0.5rem;border-bottom:1px solid #e5e7eb;">ID</th>
+          <th style="text-align:left;padding:0.5rem;border-bottom:1px solid #e5e7eb;">Name</th>
+          <th style="text-align:left;padding:0.5rem;border-bottom:1px solid #e5e7eb;">Email</th>
+          <th style="text-align:left;padding:0.5rem;border-bottom:1px solid #e5e7eb;">State</th>
+          <th style="text-align:left;padding:0.5rem;border-bottom:1px solid #e5e7eb;">District</th>
+          <th style="text-align:left;padding:0.5rem;border-bottom:1px solid #e5e7eb;">Department</th>
+        </tr>
+      </thead>
+      <tbody id="adminsTbody">
+        <% (admins || []).forEach(function(a){ %>
+          <tr>
+            <td style="padding:0.5rem;border-bottom:1px solid #f3f4f6;"><%= a.id %></td>
+            <td style="padding:0.5rem;border-bottom:1px solid #f3f4f6;"><%= a.name %></td>
+            <td style="padding:0.5rem;border-bottom:1px solid #f3f4f6;"><%= a.userEmail %></td>
+            <td style="padding:0.5rem;border-bottom:1px solid #f3f4f6;"><%= a.state || '' %></td>
+            <td style="padding:0.5rem;border-bottom:1px solid #f3f4f6;"><%= a.district || '' %></td>
+            <td style="padding:0.5rem;border-bottom:1px solid #f3f4f6;"><%= a.department || '' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<script>
+(function(){
+  const form = document.getElementById('createAdminForm');
+  const btn = document.getElementById('createAdminBtn');
+  const msg = document.getElementById('adminCreateMsg');
+  const tbody = document.getElementById('adminsTbody');
+
+  form.addEventListener('submit', async function(){
+    msg.textContent = '';
+    btn.disabled = true;
+
+    const data = Object.fromEntries(new FormData(form).entries());
+    data.designation = 'admin';
+
+    try {
+      const res = await fetch('/admin/officers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || 'Failed to create admin');
+      }
+      msg.style.color = '#065f46';
+      msg.textContent = 'Admin created successfully. ID: ' + (json.officer && json.officer.id);
+
+      // Append to table
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="padding:0.5rem;border-bottom:1px solid #f3f4f6;">${json.officer.id}</td>
+        <td style="padding:0.5rem;border-bottom:1px solid #f3f4f6;">${data.fullName}</td>
+        <td style="padding:0.5rem;border-bottom:1px solid #f3f4f6;">${data.email}</td>
+        <td style="padding:0.5rem;border-bottom:1px solid #f3f4f6;">${data.state || ''}</td>
+        <td style="padding:0.5rem;border-bottom:1px solid #f3f4f6;">${data.district || ''}</td>
+        <td style="padding:0.5rem;border-bottom:1px solid #f3f4f6;">${data.department || ''}</td>
+      `;
+      tbody.prepend(tr);
+      form.reset();
+    } catch (err) {
+      msg.style.color = '#991b1b';
+      msg.textContent = err.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+})();
+</script>

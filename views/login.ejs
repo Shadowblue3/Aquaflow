@@ -97,22 +97,14 @@
         <!-- Health Ministry Officials Login Form -->
         <div class="form-section" id="officialLoginForm">
             <div class="info-message">
-                🏛️ Official login with Employee ID, Email and Password
+                🏛️ Official login with ID and Password
             </div>
 
             <form id="officialForm" method="post">
                 <div class="form-group">
-                    <label class="form-label required" for="officialEmployeeId">Employee ID</label>
-                    <input type="text" id="officialEmployeeId" class="form-input" placeholder="Enter your Employee ID"
-                        required>
-                    <div class="error-message" id="officialEmployeeIdError">Please enter your Employee ID</div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label required" for="officialEmail">Official Email</label>
-                    <input type="email" id="officialEmail" class="form-input" placeholder="Enter your official email"
-                        required>
-                    <div class="error-message" id="officialEmailError">Please enter a valid email address</div>
+                    <label class="form-label required" for="officialEmployeeId">Officer ID</label>
+                    <input type="text" id="officialEmployeeId" class="form-input" placeholder="Enter your Officer ID" required>
+                    <div class="error-message" id="officialEmployeeIdError">Please enter your Officer ID</div>
                 </div>
 
                 <div class="form-group">
@@ -122,6 +114,8 @@
                     <img width = "20px" src="/images/eye-off.svg" id="togglePassword" class="toggle-password-off" alt="Toggle Password">
                     <div class="error-message" id="officialPasswordError">Please enter your password</div>
                 </div>
+
+                <!-- Master Code no longer required; master uses hardcoded ID/password -->
 
                 <div class="login-options">
                     <label class="remember-me">

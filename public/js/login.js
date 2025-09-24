@@ -28,10 +28,6 @@ function validateOfficialLogin() {
     const employeeId = document.getElementById('officialEmployeeId').value.trim();
     if (!employeeId) { document.getElementById('officialEmployeeIdError').style.display = 'block'; isValid = false; }
 
-    const email = document.getElementById('officialEmail').value.trim();
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) { document.getElementById('officialEmailError').style.display = 'block'; isValid = false; }
-
     const password = document.getElementById('officialPassword').value;
     if (password.length < 1) { document.getElementById('officialPasswordError').style.display = 'block'; isValid = false; }
 
@@ -75,9 +71,8 @@ document.getElementById('officialForm').addEventListener('submit', async functio
     e.preventDefault();
     if (validateOfficialLogin()) {
         const employeeId = document.getElementById('officialEmployeeId').value.trim();
-        const email = document.getElementById('officialEmail').value.trim();
         const password = document.getElementById('officialPassword').value;
-        await performLogin({ type: 'official', officialEmail: email, officialEmployeeId: employeeId, password });
+        await performLogin({ type: 'official', officialEmployeeId: employeeId, password });
     }
 });
 

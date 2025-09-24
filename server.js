@@ -14,6 +14,10 @@ const mongoose = require('mongoose');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
 
+// Hardcoded Master credentials (override via env if provided)
+const MASTER_ID = process.env.MASTER_ID || 'MSTR-0001';
+const MASTER_PASSWORD = process.env.MASTER_PASSWORD || 'Master@1234';
+
 // Middleware
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -35,6 +39,7 @@ app.set('layout', 'layout');
 const generalModel = require("./models/general-public")
 const officialModel = require("./models/officials")
 const postModel = require('./models/post');
+const communicationModel = require('./models/communication');
 const dbConnection = require("./config/db");
 const dataModel = require('./models/dataModel');
 
@@ -212,7 +217,7 @@ app.post('/report', requireLogin, requireRole(['general']), async (req, res) => 
   });
 });
 
-app.get('/water-quality', requireLogin, requireRole(['official']), (req, res) => {
+app.get('/water-quality', requireLogin, requireRole(['official', 'master']), (req, res) => {
   const language = req.query.lang || 'en';
   res.render('water-quality', {
     title: 'Water Quality',
@@ -362,61 +367,31 @@ app.post('/signup', async (req, res) => {
     const { userType } = req.body;
     const saltRounds = 10;
 
-    if (userType === 'public') {
-      const {
-        fullName, mobile, email, state, district, village,
-        password
-      } = req.body;
-
-      // Check existing (by email if provided)
-      if (email) {
-        const existing = await generalModel.findOne({ userEmail: email });
-        if (existing) {
-          return res.status(409).send('Account already exists with this email');
-        }
-      }
-
-      const hashed = await bcrypt.hash(password, saltRounds);
-      const doc = new generalModel({
-        name: fullName,
-        phoneNo: mobile ? Number(mobile) : undefined,
-        userEmail: email || undefined,
-        state,
-        district,
-        Area: village,
-        password: hashed
-      });
-      await doc.save();
-      return res.redirect('/login');
+    if (userType && userType !== 'public') {
+      return res.status(403).send('Official signup is disabled');
     }
 
-    // official signup
     const {
-      fullName, email, designation, state, district, department,
-      employeeId, mobile, password
+      fullName, mobile, email, state, district, village,
+      password
     } = req.body;
 
-    // Check existing by email or employee id
-    const existingOff = await officialModel.findOne({
-      $or: [
-        { userEmail: email },
-        { id: employeeId ? Number(employeeId) : -1 }
-      ]
-    });
-    if (existingOff) {
-      return res.status(409).send('Official account already exists (email/employee id)');
+    // Check existing (by email if provided)
+    if (email) {
+      const existing = await generalModel.findOne({ userEmail: email });
+      if (existing) {
+        return res.status(409).send('Account already exists with this email');
+      }
     }
 
     const hashed = await bcrypt.hash(password, saltRounds);
-    const doc = new officialModel({
+    const doc = new generalModel({
       name: fullName,
-      userEmail: email,
-      designation,
+      phoneNo: mobile ? Number(mobile) : undefined,
+      userEmail: email || undefined,
       state,
       district,
-      department,
-      id: employeeId ? Number(employeeId) : undefined,
-      phone: mobile ? Number(mobile) : undefined,
+      Area: village,
       password: hashed
     });
     await doc.save();
@@ -563,10 +538,10 @@ async function fetchFromFlask() {
   });
 });
 
-app.get('/community-post', requireLogin, requireRole(['official']), async (req, res) => {
+app.get('/community-post', requireLogin, requireRole(['official', 'master']), async (req, res) => {
   const language = req.query.lang || 'en';
 
-  const allPosts = await postModel.aggregate([
+  const pipelineBase = [
     {
       $addFields: {
         priority: {
@@ -595,18 +570,35 @@ app.get('/community-post', requireLogin, requireRole(['official']), async (req, 
       }
     },
     { $sort: { priority: -1, affectedCountNum: -1, _id: -1 } }
-  ]);
+  ];
+
+  const isMaster = req.session.user && req.session.user.role === 'master';
+
+  let thePosts = [];
+  if (isMaster) {
+    thePosts = await postModel.aggregate(pipelineBase);
+  } else {
+    const officerId = String(req.session.user && req.session.user.employeeId || '');
+    thePosts = await postModel.aggregate([
+      { $match: { assignedOfficerId: officerId } },
+      ...pipelineBase
+    ]);
+  }
+
+  const mapPosts = thePosts;
 
   res.render('community-post', {
     title: 'Community Post',
     language,
     activeTab: 'community-post',
-    thePosts: allPosts,
+    thePosts,
+    mapPosts,
+    isMaster
   });
 });
 
 // Toggle resolved status
-app.post('/community-post/:id/toggle', requireLogin, requireRole(['official']), async (req, res) => {
+app.post('/community-post/:id/toggle', requireLogin, requireRole(['official', 'master']), async (req, res) => {
   try {
     const id = req.params.id;
     const { resolved } = req.body; // boolean or string 'true'/'false'
@@ -619,24 +611,203 @@ app.post('/community-post/:id/toggle', requireLogin, requireRole(['official']), 
   }
 });
 
+// Assign or unassign a post to an officer (Master only)
+app.post('/community-post/:id/assign', requireLogin, requireRole(['master']), async (req, res) => {
+  try {
+    const id = req.params.id;
+    let { officerId } = req.body;
+
+    if (officerId === '' || officerId === null || typeof officerId === 'undefined') {
+      await postModel.findByIdAndUpdate(id, { $set: { assignedOfficerId: null } });
+      return res.json({ success: true, assignedOfficerId: null });
+    }
+
+    const val = String(officerId);
+    await postModel.findByIdAndUpdate(id, { $set: { assignedOfficerId: val } });
+    return res.json({ success: true, assignedOfficerId: val });
+  } catch (err) {
+    console.error('assign error', err);
+    return res.status(500).json({ success: false });
+  }
+});
+
+// Generate random alphanumeric officer ID
+function generateOfficerId(length = 8) {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let out = '';
+  for (let i = 0; i < length; i++) {
+    out += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return out;
+}
+
+// Master-only: create new officer
+app.post('/admin/officers', requireLogin, requireRole(['master']), async (req, res) => {
+  try {
+    const { fullName, email, designation, state, district, department, mobile, password } = req.body;
+    if (!password || !fullName) {
+      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+
+    const existing = await officialModel.findOne({ userEmail: email });
+    if (existing) {
+      return res.status(409).json({ success: false, message: 'Official account already exists' });
+    }
+
+    // generate unique id
+    let newId;
+    for (let i = 0; i < 5; i++) {
+      newId = generateOfficerId(8);
+      const clash = await officialModel.findOne({ id: newId });
+      if (!clash) break;
+      newId = null;
+    }
+    if (!newId) {
+      return res.status(500).json({ success: false, message: 'Failed to generate unique ID' });
+    }
+
+    const hashed = await bcrypt.hash(password, 10);
+    const doc = new officialModel({
+      name: fullName,
+      userEmail: email,
+      designation: designation || 'officer',
+      state,
+      district,
+      department,
+      id: newId,
+      phone: mobile ? Number(mobile) : undefined,
+      password: hashed
+    });
+    await doc.save();
+
+    return res.json({ success: true, officer: { id: doc.id, email: doc.userEmail, name: doc.name } });
+  } catch (err) {
+    console.error('create officer error:', err);
+    return res.status(500).json({ success: false });
+  }
+});
+
+// Communications board (Master and Officials)
+app.get('/communications', requireLogin, requireRole(['master', 'official']), async (req, res) => {
+  try {
+    const language = req.query.lang || 'en';
+    const page = Math.max(1, Number(req.query.page || 1));
+    const pageSize = 15;
+    const filter = {};
+
+    if (req.query.category) filter.category = req.query.category;
+    if (req.query.state) filter.state = req.query.state;
+    if (req.query.district) filter.district = req.query.district;
+
+    const total = await communicationModel.countDocuments(filter);
+    const threads = await communicationModel.find(filter)
+      .sort({ updatedAt: -1 })
+      .skip((page - 1) * pageSize)
+      .limit(pageSize)
+      .lean();
+
+    res.render('communications', {
+      title: 'Communications',
+      language,
+      activeTab: 'communications',
+      threads,
+      page,
+      total,
+      pageSize
+    });
+  } catch (err) {
+    console.error('communications error:', err);
+    res.status(500).send('Internal server error');
+  }
+});
+
+app.post('/communications', requireLogin, requireRole(['master', 'official']), async (req, res) => {
+  try {
+    const { title, body, category, state, district } = req.body;
+    if (!title || !body) return res.status(400).json({ success: false, message: 'Missing fields' });
+
+    const doc = new communicationModel({
+      title,
+      body,
+      category: category || 'general',
+      state: state || undefined,
+      district: district || undefined,
+      authorId: String(req.session.user.employeeId || 'MASTER'),
+      authorRole: req.session.user.role,
+      authorName: req.session.user.role === 'master' ? 'Master' : (req.session.user.email || 'Official')
+    });
+    await doc.save();
+    return res.json({ success: true, id: String(doc._id) });
+  } catch (err) {
+    console.error('create communication error:', err);
+    return res.status(500).json({ success: false });
+  }
+});
+
+app.post('/communications/:id/comment', requireLogin, requireRole(['master', 'official']), async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { text } = req.body;
+    if (!text) return res.status(400).json({ success: false, message: 'Missing text' });
+
+    const comment = {
+      text,
+      authorId: String(req.session.user.employeeId || 'MASTER'),
+      authorRole: req.session.user.role,
+      authorName: req.session.user.role === 'master' ? 'Master' : (req.session.user.email || 'Official')
+    };
+
+    await communicationModel.findByIdAndUpdate(id, {
+      $push: { comments: comment },
+      $set: { updatedAt: new Date() }
+    });
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('comment error:', err);
+    return res.status(500).json({ success: false });
+  }
+});
+
+// Admin management page (Master only)
+app.get('/admin-management', requireLogin, requireRole(['master']), async (req, res) => {
+  try {
+    const language = req.query.lang || 'en';
+    const admins = await officialModel.find({ designation: 'admin' }).lean();
+    res.render('admin-management', {
+      title: 'Admin Management',
+      language,
+      activeTab: 'admin-management',
+      admins
+    });
+  } catch (err) {
+    console.error('admin-management error:', err);
+    res.status(500).send('Internal server error');
+  }
+});
+
 app.post('/login', async (req, res) => {
   try {
     const type = req.body.type || req.body.role || 'public';
 
     if (type === 'official') {
-      const email = req.body.officialEmail;
-      const employeeId = req.body.officialEmployeeId;
+      const employeeId = String(req.body.officialEmployeeId || '').trim();
       const password = req.body.password;
 
-      const user = await officialModel.findOne({ userEmail: email });
-      if (!user) return res.status(401).json({ success: false, message: 'Invalid credentials' });
-      if (employeeId && String(user.id || '') !== String(employeeId)) {
-        return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      // Hardcoded Master login (bypasses DB)
+      if (employeeId === MASTER_ID && password === MASTER_PASSWORD) {
+        req.session.user = { role: 'master', email: null, employeeId: MASTER_ID };
+        return res.json({ success: true, redirect: '/dashboard' });
       }
+
+      // Normal officer login via DB (by ID only)
+      const user = await officialModel.findOne({ id: employeeId });
+      if (!user) return res.status(401).json({ success: false, message: 'Invalid credentials' });
+
       const ok = await bcrypt.compare(password, user.password || '');
       if (!ok) return res.status(401).json({ success: false, message: 'Invalid credentials' });
 
-      req.session.user = { role: 'official', email: user.userEmail, employeeId: user.id };
+      req.session.user = { role: 'official', email: user.userEmail || null, employeeId: user.id };
       return res.json({ success: true, redirect: '/dashboard' });
     } else {
       const email = req.body.publicEmail;
