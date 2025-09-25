@@ -155,6 +155,15 @@ app.get('/dashboard', requireLogin, async (req, res) => {
   try {
     const language = req.query.lang || 'en';
 
+    // If general public user, render public dashboard
+    if (req.session.user && req.session.user.role === 'general') {
+      return res.render('publicDashboard', {
+        title: 'Dashboard',
+        language,
+        activeTab: 'dashboard'
+      });
+    }
+
     // Compute total cases from Disease_Data
     const agg = await dataModel.aggregate([
       {
@@ -852,6 +861,15 @@ app.get('/logout', (req, res) => {
     res.redirect('/login');
   });
 });
+
+app.get('/publicDashboard', requireLogin, (req, res) => {
+  const language = req.query.lang || 'en';
+  res.render('publicDashboard', {
+    title: 'Public Dashboard',
+    language,
+    activeTab: 'dashboard'
+  });
+})
 
 // Global error handlers
 process.on('unhandledRejection', (reason) => {

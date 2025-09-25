@@ -40,6 +40,7 @@ async function performLogin(payload) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
     });
+    
     const data = await res.json();
     if (data && data.success) {
         window.location.href = data.redirect || '/dashboard';

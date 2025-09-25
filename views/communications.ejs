@@ -191,7 +191,7 @@
       const list = card.querySelector('.comments-list');
       const div = document.createElement('div');
       div.className = 'comment';
-      div.style.cssText = 'padding:0.5rem 0;border-bottom:1px solid #f3f4f6;';
+      div.style.cssText = 'padding: 20px';
       const now = new Date().toLocaleString();
       div.innerHTML = `<div style="font-size:0.9rem;color:#4b5563;"><i class=\"fas fa-user-shield\"></i> <strong>You</strong> <span style=\"margin-left:0.5rem;color:#9ca3af;\">(${now})</span></div><div>${text}</div>`;
       list.appendChild(div);
