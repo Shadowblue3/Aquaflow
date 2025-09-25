@@ -16,8 +16,8 @@ const session = require('express-session');
 const bcrypt = require('bcrypt');
 
 // Hardcoded Master credentials (override via env if provided)
-const MASTER_ID = process.env.MASTER_ID || 'MSTR-0001';
-const MASTER_PASSWORD = process.env.MASTER_PASSWORD || 'Master@1234';
+const MASTER_ID = process.env.MASTER_ID;
+const MASTER_PASSWORD = process.env.MASTER_PASSWORD;
 
 // Middleware
 app.set('trust proxy', 1);
@@ -863,5 +863,6 @@ process.on('uncaughtException', (err) => {
 
 // Start server
 app.listen(PORT, HOST, () => {
+  console.log(`http://localhost:3000`)
   console.log(`Smart Health Surveillance System running on http://${HOST}:${PORT}`);
 });

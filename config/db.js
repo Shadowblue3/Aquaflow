@@ -1,8 +1,14 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
 
-const connection = mongoose.connect('mongodb+srv://setudeyindia_db_user:G8z0myA0G7D9Hiwt@cluster0.pw3lt0s.mongodb.net/water').then(()=>{
+// Use the environment variable
+const connection = mongoose.connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+}).then(() => {
     console.log("connected to mongodb");
-})
+}).catch(err => {
+    console.error("Error connecting to MongoDB:", err.message);
+});
 
 module.exports = connection;
