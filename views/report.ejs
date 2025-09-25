@@ -37,6 +37,23 @@
             </div>
         </div>
 
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="locality" class="form-label">
+                    <i class="fas fa-map-pin"></i>
+                    Locality / Village
+                </label>
+                <input type="text" id="locality" name="locality" class="form-input" placeholder="Auto-detected locality">
+            </div>
+            <div class="form-group">
+                <label for="pinCode" class="form-label">
+                    <i class="fas fa-mail-bulk"></i>
+                    PIN Code
+                </label>
+                <input type="text" id="pinCode" name="pinCode" class="form-input" placeholder="Auto-detected PIN" readonly>
+            </div>
+        </div>
+
         <div class="form-group">
             <label for="locationDisplay" class="form-label">
                 <i class="fas fa-location-arrow"></i>
@@ -158,6 +175,8 @@
   var districtOther = document.getElementById('districtOther');
   var regionHidden = document.getElementById('postRegion');
   var postForm = document.getElementById('postForm');
+  var pinCodeInput = document.getElementById('pinCode');
+  var localityInput = document.getElementById('locality');
 
   var STATES_IN_INDIA = [
     'Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat','Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal','Andaman and Nicobar Islands','Chandigarh','Dadra and Nagar Haveli and Daman and Diu','Delhi','Jammu and Kashmir','Ladakh','Lakshadweep','Puducherry'
@@ -234,13 +253,25 @@
 
   function reverseGeocodeAndFill(lat, lon) {
     if (!stateSelect || !districtSelect) return;
-    var url = 'https://nominatim.openstreetmap.org/reverse?format=json&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lon) + '&zoom=10&addressdetails=1';
+    var url = 'https://nominatim.openstreetmap.org/reverse?format=json&lat=' + encodeURIComponent(lat) + '&lon=' + encodeURIComponent(lon) + '&zoom=14&addressdetails=1';
     fetch(url, { headers: { 'Accept': 'application/json' } })
       .then(function(r){ return r.json(); })
       .then(function(data){
         var addr = data && data.address ? data.address : {};
         var stateName = addr.state || addr.region || '';
         var districtName = addr.state_district || addr.county || addr.district || addr.city_district || '';
+        var locality = addr.village || addr.town || addr.suburb || addr.neighbourhood || addr.hamlet || addr.city || '';
+        var postcode = addr.postcode || '';
+        if (pinCodeInput) pinCodeInput.value = postcode;
+        if (localityInput) localityInput.value = locality;
+        if (display) {
+          var parts = [];
+          if (locality) parts.push(locality);
+          if (districtName) parts.push(districtName);
+          if (stateName) parts.push(stateName);
+          if (postcode) parts.push(postcode);
+          display.value = parts.filter(Boolean).join(', ');
+        }
         if (stateName && stateSelect) {
           var match = null;
           for (var i=0; i<stateSelect.options.length; i++) {

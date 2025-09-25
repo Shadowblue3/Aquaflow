@@ -12,8 +12,15 @@
         /* padding: 20px; */
     }
 
+    .totalContent{
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
     .slideContainer {
-        width: 90vw;
+        width: 75vw;
         max-width: 1200px;
         height: 70vh;
         margin: 0 auto;
@@ -351,7 +358,7 @@
         top: -3px;
         left: 50%;
         transform: translateX(-50%);
-        box-shadow: 
+        box-shadow:
             0 36px 0 #e74c3c,
             -15px 15px 0 #e74c3c,
             15px 15px 0 #e74c3c,
@@ -365,7 +372,7 @@
     }
 
     .animated-virus:nth-child(3n)::before {
-        box-shadow: 
+        box-shadow:
             0 36px 0 #f39c12,
             -15px 15px 0 #f39c12,
             15px 15px 0 #f39c12,
@@ -379,7 +386,7 @@
     }
 
     .animated-virus:nth-child(5n)::before {
-        box-shadow: 
+        box-shadow:
             0 36px 0 #9b59b6,
             -15px 15px 0 #9b59b6,
             15px 15px 0 #9b59b6,
@@ -392,12 +399,15 @@
             top: -30px;
             opacity: 0;
         }
+
         10% {
             opacity: 0.6;
         }
+
         90% {
             opacity: 0.6;
         }
+
         100% {
             top: 100%;
             opacity: 0;
@@ -405,15 +415,20 @@
     }
 
     @keyframes virusFloat {
-        0%, 100% {
+
+        0%,
+        100% {
             transform: translate(0, 0) rotate(0deg) scale(1);
         }
+
         25% {
             transform: translate(-20px, -30px) rotate(90deg) scale(1.1);
         }
+
         50% {
             transform: translate(30px, -20px) rotate(180deg) scale(0.9);
         }
+
         75% {
             transform: translate(-10px, 20px) rotate(270deg) scale(1.05);
         }
@@ -436,10 +451,13 @@
     }
 
     @keyframes gentle-pulse {
-        0%, 100% {
+
+        0%,
+        100% {
             transform: scale(1);
             box-shadow: 0 10px 30px rgba(255, 107, 107, 0.3);
         }
+
         50% {
             transform: scale(1.02);
             box-shadow: 0 15px 40px rgba(255, 107, 107, 0.4);
@@ -477,105 +495,139 @@
         }
     }
 </style>
-
-<div class="slideContainer">
-    <div class="slides">
-        <!-- Slide 1: Title -->
-        <div class="slide slide1">
-            <div class="slide-content">
-                <h1>💧 Water-Borne Diseases</h1>
-                <p>Understanding the risks and protecting your health</p>
-                <p style="font-size: 1.2em; margin-top: 30px;">Clean water saves lives - Let's learn how to stay safe!
-                </p>
+<div class="totalContent">
+    <div class="slideContainer">
+        <div class="slides">
+            <!-- Slide 1: Title -->
+            <div class="slide slide1">
+                <div class="slide-content">
+                    <h1>💧 Water-Borne Diseases</h1>
+                    <p>Understanding the risks and protecting your health</p>
+                    <p style="font-size: 1.2em; margin-top: 30px;">Clean water saves lives - Let's learn how to stay
+                        safe!
+                    </p>
+                </div>
+                <div class="water-drop" style="left: 10%; animation-delay: 0s;"></div>
+                <div class="water-drop" style="left: 20%; animation-delay: 0.5s;"></div>
+                <div class="water-drop" style="left: 80%; animation-delay: 1s;"></div>
+                <div class="water-drop" style="left: 90%; animation-delay: 1.5s;"></div>
             </div>
-            <div class="water-drop" style="left: 10%; animation-delay: 0s;"></div>
-            <div class="water-drop" style="left: 20%; animation-delay: 0.5s;"></div>
-            <div class="water-drop" style="left: 80%; animation-delay: 1s;"></div>
-            <div class="water-drop" style="left: 90%; animation-delay: 1.5s;"></div>
+
+            <!-- Slide 2: Image 1 -->
+            <div class="slide slide2">
+                <img src="/images/pic1.jpg" alt="Water-borne diseases information">
+            </div>
+
+            <!-- Slide 3: Image 2 -->
+            <div class="slide slide3">
+                <img src="/images/pic2.jpg" alt="Water-borne diseases information">
+            </div>
+
+            <!-- Slide 4: Image 3 -->
+            <div class="slide slide4">
+                <img src="/images/pic3.jpg" alt="Water-borne diseases information">
+            </div>
         </div>
 
-        <!-- Slide 2: Image 1 -->
-        <div class="slide slide2">
-            <img src="/images/pic1.jpg" alt="Water-borne diseases information">
-        </div>
+        <!-- Navigation buttons -->
+        <button class="navBtn prev">&#10094;</button>
+        <button class="navBtn next">&#10095;</button>
 
-        <!-- Slide 3: Image 2 -->
-        <div class="slide slide3">
-            <img src="/images/pic2.jpg" alt="Water-borne diseases information">
-        </div>
-
-        <!-- Slide 4: Image 3 -->
-        <div class="slide slide4">
-            <img src="/images/pic3.jpg" alt="Water-borne diseases information">
+        <!-- Progress indicator -->
+        <div class="progress">
+            <div class="progress-dot active"></div>
+            <div class="progress-dot"></div>
+            <div class="progress-dot"></div>
+            <div class="progress-dot"></div>
         </div>
     </div>
 
-    <!-- Navigation buttons -->
-    <button class="navBtn prev">&#10094;</button>
-    <button class="navBtn next">&#10095;</button>
 
-    <!-- Progress indicator -->
-    <div class="progress">
-        <div class="progress-dot active"></div>
-        <div class="progress-dot"></div>
-        <div class="progress-dot"></div>
-        <div class="progress-dot"></div>
-    </div>
-</div>
 
-</div>
-
-<!-- Content Section -->
+    <!-- Content Section
 <div class="content-section">
-</div>
+</div> -->
 
-<!-- Single Content Container -->
-<div class="content-section">
-    <!-- Animated Water Drops -->
-    <div class="animated-water-drop" style="left: 5%; animation-delay: 0s;"></div>
-    <div class="animated-water-drop" style="left: 15%; animation-delay: -1s;"></div>
-    <div class="animated-water-drop" style="left: 85%; animation-delay: -3s;"></div>
-    <div class="animated-water-drop" style="left: 95%; animation-delay: -4s;"></div>
-    <div class="animated-water-drop" style="left: 25%; animation-delay: -6s;"></div>
-    <div class="animated-water-drop" style="left: 75%; animation-delay: -7s;"></div>
+    <!-- Single Content Container -->
+    <div class="content-section">
+        <!-- Animated Water Drops -->
+        <div class="animated-water-drop" style="left: 5%; animation-delay: 0s;"></div>
+        <div class="animated-water-drop" style="left: 15%; animation-delay: -1s;"></div>
+        <div class="animated-water-drop" style="left: 85%; animation-delay: -3s;"></div>
+        <div class="animated-water-drop" style="left: 95%; animation-delay: -4s;"></div>
+        <div class="animated-water-drop" style="left: 25%; animation-delay: -6s;"></div>
+        <div class="animated-water-drop" style="left: 75%; animation-delay: -7s;"></div>
 
-    <!-- Animated Virus Particles -->
-    <div class="animated-virus" style="top: 15%; left: 10%; animation-delay: 0s;"></div>
-    <div class="animated-virus" style="top: 45%; left: 88%; animation-delay: -2s;"></div>
-    <div class="animated-virus" style="top: 75%; left: 12%; animation-delay: -4s;"></div>
-    <div class="animated-virus" style="top: 25%; left: 82%; animation-delay: -6s;"></div>
-    <div class="animated-virus" style="top: 65%; left: 85%; animation-delay: -8s;"></div>
+        <!-- Animated Virus Particles -->
+        <div class="animated-virus" style="top: 15%; left: 10%; animation-delay: 0s;"></div>
+        <div class="animated-virus" style="top: 45%; left: 88%; animation-delay: -2s;"></div>
+        <div class="animated-virus" style="top: 75%; left: 12%; animation-delay: -4s;"></div>
+        <div class="animated-virus" style="top: 25%; left: 82%; animation-delay: -6s;"></div>
+        <div class="animated-virus" style="top: 65%; left: 85%; animation-delay: -8s;"></div>
 
-    <h2>💧 Understanding Water-Borne Diseases</h2>
-    
-    <h3>🌊 What Are Water-Borne Diseases?</h3>
-    <p>Water-borne diseases are illnesses caused by <span class="highlight">pathogenic microorganisms</span> that are transmitted through contaminated water. These diseases affect millions of people worldwide and are particularly prevalent in areas with poor sanitation and limited access to clean drinking water. When we consume contaminated water or food prepared with unsafe water, harmful bacteria, viruses, parasites, and other pathogens enter our digestive system, causing severe health problems ranging from mild stomach upset to life-threatening conditions.</p>
+        <h2>💧 Understanding Water-Borne Diseases</h2>
 
-    <h3>🦠 How Do These Diseases Spread?</h3>
-    <p>Water contamination occurs through various pathways. <span class="highlight">Human and animal waste</span> is the primary source of contamination, especially when proper sewage treatment is lacking. Industrial pollution, agricultural runoff, and poor waste management further compromise water quality. The transmission happens when people drink contaminated water, eat food washed or prepared with unsafe water, or come into contact with contaminated surfaces. Poor personal hygiene practices can accelerate the spread of these diseases within communities.</p>
+        <h3>🌊 What Are Water-Borne Diseases?</h3>
+        <p>Water-borne diseases are illnesses caused by <span class="highlight">pathogenic microorganisms</span> that
+            are transmitted through contaminated water. These diseases affect millions of people worldwide and are
+            particularly prevalent in areas with poor sanitation and limited access to clean drinking water. When we
+            consume contaminated water or food prepared with unsafe water, harmful bacteria, viruses, parasites, and
+            other pathogens enter our digestive system, causing severe health problems ranging from mild stomach upset
+            to life-threatening conditions.</p>
 
-    <div class="important-notice">
-        <h4>⚠️ Critical Health Alert</h4>
-        <p>According to WHO, contaminated water causes over 3.4 million deaths annually, with children being the most vulnerable population!</p>
+        <h3>🦠 How Do These Diseases Spread?</h3>
+        <p>Water contamination occurs through various pathways. <span class="highlight">Human and animal waste</span> is
+            the primary source of contamination, especially when proper sewage treatment is lacking. Industrial
+            pollution, agricultural runoff, and poor waste management further compromise water quality. The transmission
+            happens when people drink contaminated water, eat food washed or prepared with unsafe water, or come into
+            contact with contaminated surfaces. Poor personal hygiene practices can accelerate the spread of these
+            diseases within communities.</p>
+
+        <div class="important-notice">
+            <h4>⚠️ Critical Health Alert</h4>
+            <p>According to WHO, contaminated water causes over 3.4 million deaths annually, with children being the
+                most vulnerable population!</p>
+        </div>
+
+        <h3>🏥 Recognizing the Symptoms</h3>
+        <p>Early recognition of symptoms is crucial for timely treatment. Most water-borne diseases affect the <span
+                class="highlight">digestive system</span> first, causing symptoms like diarrhea, vomiting, and stomach
+            cramps. However, some diseases can affect other organs as well. Symptoms may appear within hours or take
+            several days to manifest. Persistent diarrhea, especially with blood or mucus, high fever, severe
+            dehydration, and yellowing of the skin or eyes are serious warning signs that require immediate medical
+            attention.</p>
+
+        <h3>🛡️ Prevention: Your Best Defense</h3>
+        <p>The good news is that water-borne diseases are <span class="highlight">highly preventable</span> with proper
+            precautions. The golden rule is simple: "Boil it, cook it, peel it, or forget it!" This means drinking only
+            boiled or bottled water, eating hot freshly-cooked food, and consuming fruits you can peel yourself.
+            Personal hygiene plays a vital role in prevention. Wash your hands frequently with soap and clean water,
+            especially before eating and after using the toilet. Avoid ice cubes from unknown sources, street vendor
+            food, and raw vegetables in areas with questionable water quality.</p>
+
+        <h3>🚨 When to Seek Medical Help</h3>
+        <p>While mild symptoms may resolve on their own, certain signs indicate the need for immediate medical
+            attention. <span class="highlight">Severe dehydration</span> is particularly dangerous, especially in
+            children and elderly individuals. Signs include dry mouth, sunken eyes, decreased urination, and dizziness.
+            Don't wait if you experience bloody stools, high fever above 101°F (38.3°C), severe abdominal pain, signs of
+            jaundice, or if symptoms worsen or persist for more than 24-48 hours. Quick medical intervention can prevent
+            complications and ensure faster recovery.</p>
+
+        <div class="important-notice">
+            <h4>🆘 Emergency Warning Signs</h4>
+            <p>Call for immediate medical help if you experience severe dehydration, bloody diarrhea, high fever, or
+                persistent vomiting!</p>
+        </div>
+
+        <h3>💪 Stay Safe, Stay Healthy</h3>
+        <p>Remember that prevention is always better than cure. By following simple hygiene practices and being cautious
+            about water and food sources, you can protect yourself and your loved ones from water-borne diseases. Stay
+            informed, stay vigilant, and don't hesitate to seek medical help when needed. Clean water and good hygiene
+            are fundamental rights that everyone deserves - let's work together to make them accessible to all.</p>
     </div>
 
-    <h3>🏥 Recognizing the Symptoms</h3>
-    <p>Early recognition of symptoms is crucial for timely treatment. Most water-borne diseases affect the <span class="highlight">digestive system</span> first, causing symptoms like diarrhea, vomiting, and stomach cramps. However, some diseases can affect other organs as well. Symptoms may appear within hours or take several days to manifest. Persistent diarrhea, especially with blood or mucus, high fever, severe dehydration, and yellowing of the skin or eyes are serious warning signs that require immediate medical attention.</p>
-
-    <h3>🛡️ Prevention: Your Best Defense</h3>
-    <p>The good news is that water-borne diseases are <span class="highlight">highly preventable</span> with proper precautions. The golden rule is simple: "Boil it, cook it, peel it, or forget it!" This means drinking only boiled or bottled water, eating hot freshly-cooked food, and consuming fruits you can peel yourself. Personal hygiene plays a vital role in prevention. Wash your hands frequently with soap and clean water, especially before eating and after using the toilet. Avoid ice cubes from unknown sources, street vendor food, and raw vegetables in areas with questionable water quality.</p>
-
-    <h3>🚨 When to Seek Medical Help</h3>
-    <p>While mild symptoms may resolve on their own, certain signs indicate the need for immediate medical attention. <span class="highlight">Severe dehydration</span> is particularly dangerous, especially in children and elderly individuals. Signs include dry mouth, sunken eyes, decreased urination, and dizziness. Don't wait if you experience bloody stools, high fever above 101°F (38.3°C), severe abdominal pain, signs of jaundice, or if symptoms worsen or persist for more than 24-48 hours. Quick medical intervention can prevent complications and ensure faster recovery.</p>
-
-    <div class="important-notice">
-        <h4>🆘 Emergency Warning Signs</h4>
-        <p>Call for immediate medical help if you experience severe dehydration, bloody diarrhea, high fever, or persistent vomiting!</p>
-    </div>
-
-    <h3>💪 Stay Safe, Stay Healthy</h3>
-    <p>Remember that prevention is always better than cure. By following simple hygiene practices and being cautious about water and food sources, you can protect yourself and your loved ones from water-borne diseases. Stay informed, stay vigilant, and don't hesitate to seek medical help when needed. Clean water and good hygiene are fundamental rights that everyone deserves - let's work together to make them accessible to all.</p>
 </div>
+
 
 <script>
     let slides = document.querySelector(".slides");
