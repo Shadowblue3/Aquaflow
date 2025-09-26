@@ -27,7 +27,42 @@
 </div>
 
 <section class="card" style="padding:1rem;margin-bottom:1rem;">
-  <h3 style="margin:0 0 0.75rem 0;">Create a Thread</h3>
+  <div style="display:flex; justify-content:space-between; align-items:start; gap:1rem; flex-wrap:wrap;">
+    <h3 style="margin:0 0 0.75rem 0;">Create a Thread</h3>
+    <button id="openDataChangeBtn" class="btn" style="background:#dc2626;color:#fff;">Report about the data change</button>
+  </div>
+
+  <!-- Data Change Report Modal -->
+  <div id="dataChangeModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); align-items:center; justify-content:center; z-index:50;">
+    <div style="background:#fff; padding:1rem; border-radius:8px; width:100%; max-width:560px;">
+      <h3 style="margin-top:0;">Report about the data change</h3>
+      <p style="margin:0 0 0.5rem 0; color:#6b7280;">This will send an email to inform about changes in the disease data. It will not change data directly.</p>
+      <form id="dataChangeForm" class="form-grid" onsubmit="return false;">
+        <div class="form-row">
+          <label>Disease name</label>
+          <input type="text" name="diseaseName" required />
+        </div>
+        <div class="form-row">
+          <label>Location of which data is changed</label>
+          <input type="text" name="location" required />
+        </div>
+        <div class="form-row">
+          <label>Date</label>
+          <input type="date" name="date" required />
+        </div>
+        <div class="form-row">
+          <label>Description</label>
+          <textarea name="description" rows="4" required placeholder="Describe the change..."></textarea>
+        </div>
+        <div class="form-actions" style="display:flex; gap:0.5rem;">
+          <button id="sendDataChangeBtn" type="submit" class="btn" style="background:#dc2626;color:#fff;">Send</button>
+          <button type="button" id="cancelDataChangeBtn" class="btn" style="background:#e5e7eb; color:#111827;">Cancel</button>
+        </div>
+      </form>
+      <div id="dataChangeMsg" style="margin-top:0.5rem; font-size:0.9rem;"></div>
+    </div>
+  </div>
+
   <form id="threadForm" class="form-grid" onsubmit="return false;">
     <div class="form-row">
       <label>Title</label>
@@ -114,6 +149,47 @@
   const btn = document.getElementById('createThreadBtn');
   const msg = document.getElementById('threadMsg');
   const list = document.getElementById('threadsList');
+
+  // Data change report elements
+  const openDataChangeBtn = document.getElementById('openDataChangeBtn');
+  const dataChangeModal = document.getElementById('dataChangeModal');
+  const dataChangeForm = document.getElementById('dataChangeForm');
+  const dataChangeMsg = document.getElementById('dataChangeMsg');
+  const sendDataChangeBtn = document.getElementById('sendDataChangeBtn');
+  const cancelDataChangeBtn = document.getElementById('cancelDataChangeBtn');
+
+  openDataChangeBtn.addEventListener('click', () => {
+    dataChangeMsg.textContent = '';
+    dataChangeForm.reset();
+    dataChangeModal.style.display = 'flex';
+  });
+  cancelDataChangeBtn.addEventListener('click', () => {
+    dataChangeModal.style.display = 'none';
+  });
+  dataChangeForm.addEventListener('submit', async () => {
+    dataChangeMsg.textContent = '';
+    sendDataChangeBtn.disabled = true;
+    try {
+      const payload = Object.fromEntries(new FormData(dataChangeForm).entries());
+      const res = await fetch('/communications/data-change-report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || json.success === false) {
+        throw new Error((json && json.message) || 'Failed to send report');
+      }
+      dataChangeMsg.style.color = '#065f46';
+      dataChangeMsg.textContent = 'Report email sent successfully';
+      setTimeout(() => { dataChangeModal.style.display = 'none'; }, 600);
+    } catch (err) {
+      dataChangeMsg.style.color = '#991b1b';
+      dataChangeMsg.textContent = err.message || 'Failed to send report';
+    } finally {
+      sendDataChangeBtn.disabled = false;
+    }
+  });
 
   form.addEventListener('submit', async function(){
     msg.textContent = '';

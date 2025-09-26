@@ -14,6 +14,7 @@ const FLASK_URL = process.env.FLASK_URL || 'https://aquaflow-2-0-backend-1.onren
 const mongoose = require('mongoose');
 const session = require('express-session');
 const bcrypt = require('bcrypt');
+const nodemailer = require('nodemailer');
 
 // Hardcoded Master credentials (override via env if provided)
 const MASTER_ID = process.env.MASTER_ID;
@@ -706,6 +707,73 @@ app.post('/admin/officers', requireLogin, requireRole(['master']), async (req, r
   }
 });
 
+// Update an existing admin (Master only)
+app.put('/admin/officers/:id', requireLogin, requireRole(['master']), async (req, res) => {
+  try {
+    const id = req.params.id;
+    const { fullName, email, state, district, department, mobile, password } = req.body;
+
+    const set = {};
+    if (typeof fullName === 'string') set.name = fullName;
+    if (typeof email === 'string') set.userEmail = email;
+    if (typeof state === 'string') set.state = state;
+    if (typeof district === 'string') set.district = district;
+    if (typeof department === 'string') set.department = department;
+    if (typeof mobile !== 'undefined') set.phone = mobile ? Number(mobile) : undefined;
+
+    if (password && String(password).trim()) {
+      set.password = await bcrypt.hash(String(password), 10);
+    }
+
+    // Prevent duplicate email
+    if (set.userEmail) {
+      const existing = await officialModel.findOne({ userEmail: set.userEmail, id: { $ne: id } });
+      if (existing) {
+        return res.status(409).json({ success: false, message: 'Email already in use' });
+      }
+    }
+
+    const updated = await officialModel.findOneAndUpdate(
+      { id, designation: 'admin' },
+      { $set: set },
+      { new: true }
+    );
+    if (!updated) {
+      return res.status(404).json({ success: false, message: 'Admin not found' });
+    }
+
+    return res.json({
+      success: true,
+      officer: {
+        id: updated.id,
+        name: updated.name,
+        email: updated.userEmail,
+        state: updated.state,
+        district: updated.district,
+        department: updated.department
+      }
+    });
+  } catch (err) {
+    console.error('update admin error:', err);
+    return res.status(500).json({ success: false });
+  }
+});
+
+// Delete an existing admin (Master only)
+app.delete('/admin/officers/:id', requireLogin, requireRole(['master']), async (req, res) => {
+  try {
+    const id = req.params.id;
+    const deleted = await officialModel.findOneAndDelete({ id, designation: 'admin' });
+    if (!deleted) {
+      return res.status(404).json({ success: false, message: 'Admin not found' });
+    }
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('delete admin error:', err);
+    return res.status(500).json({ success: false });
+  }
+});
+
 // Communications board (Master and Officials)
 app.get('/communications', requireLogin, requireRole(['master', 'official']), async (req, res) => {
   try {
@@ -787,6 +855,111 @@ app.post('/communications/:id/comment', requireLogin, requireRole(['master', 'of
     return res.status(500).json({ success: false });
   }
 });
+
+// Report data change via email (Master and Officials)
+app.post('/communications/data-change-report', requireLogin, requireRole(['master', 'official']), async (req, res) => {
+  try {
+    const { description, location, date, diseaseName } = req.body;
+    if (!description || !location || !date || !diseaseName) {
+      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+
+    // Configure transporter from env (supports fallback to Ethereal in dev)
+    const host = process.env.SMTP_HOST || null;
+    const port = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : (host ? 587 : undefined);
+    const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+    const user = process.env.SMTP_USER || process.env.GMAIL_USER || null;
+    const pass = process.env.SMTP_PASS || process.env.GMAIL_PASS || null;
+
+    let transporter;
+    let usingTestAccount = false;
+
+    if (user && pass) {
+      transporter = host
+        ? nodemailer.createTransport({ host, port, secure, auth: { user, pass } })
+        : nodemailer.createTransport({ service: 'gmail', auth: { user, pass } });
+    } else {
+      // Dev fallback: auto-create an Ethereal test account to avoid hard failure
+      const testAccount = await nodemailer.createTestAccount();
+      transporter = nodemailer.createTransport({
+        host: 'smtp.ethereal.email',
+        port: 587,
+        secure: false,
+        auth: { user: testAccount.user, pass: testAccount.pass }
+      });
+      usingTestAccount = true;
+      console.warn('Email service not configured; using Ethereal test account for preview only.');
+    }
+
+    const reporter = req.session.user || {};
+    const subject = `Data Change Report - ${diseaseName}`;
+
+    const text = [
+      'A data change has been reported by an administrator/officer.',
+      '',
+      `Disease: ${diseaseName}`,
+      `Location: ${location}`,
+      `Date: ${date}`,
+      '',
+      'Description:',
+      description,
+      '',
+      'Reporter Details:',
+      `Role: ${reporter.role || 'unknown'}`,
+      `Employee ID: ${reporter.employeeId || 'N/A'}`,
+      `Email: ${reporter.email || 'N/A'}`
+    ].join('\n');
+
+    const html = `
+      <div>
+        <p>A data change has been reported by an administrator/officer.</p>
+        <ul>
+          <li><strong>Disease:</strong> ${escapeHtml(diseaseName)}</li>
+          <li><strong>Location:</strong> ${escapeHtml(location)}</li>
+          <li><strong>Date:</strong> ${escapeHtml(date)}</li>
+        </ul>
+        <p><strong>Description:</strong></p>
+        <p>${escapeHtml(description).replace(/\n/g, '<br/>')}</p>
+        <hr/>
+        <p><strong>Reporter Details</strong><br/>
+          Role: ${escapeHtml(reporter.role || 'unknown')}<br/>
+          Employee ID: ${escapeHtml(reporter.employeeId || 'N/A')}<br/>
+          Email: ${escapeHtml(reporter.email || 'N/A')}</p>
+      </div>`;
+
+    const mailOptions = {
+      from: process.env.SMTP_FROM || user,
+      to: 'saptarshibhunia5@gmail.com',
+      subject,
+      text,
+      html
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    const previewUrl = nodemailer.getTestMessageUrl(info) || null;
+    if (previewUrl) {
+      console.log('Ethereal preview URL:', previewUrl);
+    }
+    return res.json({ success: true, previewUrl });
+  } catch (err) {
+    console.error('data-change-report error:', err);
+    return res.status(500).json({ success: false, message: 'Failed to send email' });
+  }
+});
+
+// Helper to escape HTML entities
+function escapeHtml(str) {
+  try {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  } catch (e) {
+    return '';
+  }
+}
 
 // Admin management page (Master only)
 app.get('/admin-management', requireLogin, requireRole(['master']), async (req, res) => {
