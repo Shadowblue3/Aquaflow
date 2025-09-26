@@ -271,6 +271,124 @@ app.get('/api/water-sensors', (req, res) => {
   res.json(mockData.waterSensors);
 });
 
+// Translation API (server-side, uses Google Translate)
+const SUPPORTED_LANGS = ['en', 'hi', 'as', 'bn'];
+const translationCache = new Map();
+
+function translateViaGoogle(texts, target, source = 'en') {
+  return new Promise((resolve) => {
+    try {
+      const key = process.env.GOOGLE_TRANSLATE_API_KEY;
+      if (!key) {
+        return resolve([]);
+      }
+      const url = new URL('https://translation.googleapis.com/language/translate/v2');
+      url.searchParams.set('key', key);
+
+      const payload = JSON.stringify({ q: texts, target, source });
+
+      const options = {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(payload)
+        },
+        timeout: 20000
+      };
+
+      const req = https.request(url, options, (resp) => {
+        let data = '';
+        resp.on('data', (chunk) => { data += chunk.toString(); });
+        resp.on('end', () => {
+          try {
+            const json = JSON.parse(data);
+            const out = (json && json.data && Array.isArray(json.data.translations))
+              ? json.data.translations.map(t => t.translatedText)
+              : [];
+            resolve(out);
+          } catch (e) {
+            console.error('translate parse error', e);
+            console.error('Raw response:', data);
+            resolve([]);
+          }
+        });
+      });
+
+      req.on('error', (err) => {
+        console.error('translate request error', err);
+        resolve([]);
+      });
+
+      req.on('timeout', () => {
+        try { req.destroy(); } catch (_) {}
+        resolve([]);
+      });
+
+      req.write(payload);
+      req.end();
+    } catch (e) {
+      console.error('translateViaGoogle error', e);
+      resolve([]);
+    }
+  });
+}
+
+app.post('/api/translate', async (req, res) => {
+  try {
+    const { q, target = 'en', source = 'en' } = req.body || {};
+
+    if (!process.env.GOOGLE_TRANSLATE_API_KEY) {
+      return res.status(501).json({ error: 'translate_unconfigured' });
+    }
+
+    if (!q) return res.json({ translations: [] });
+    if (!SUPPORTED_LANGS.includes(target)) {
+      return res.status(400).json({ error: 'unsupported_language' });
+    }
+
+    const arr = Array.isArray(q) ? q.map(s => String(s)) : [String(q)];
+
+    if (target === source || target === 'en') {
+      return res.json({ translations: arr });
+    }
+
+    const results = new Array(arr.length);
+    const toTranslate = [];
+    const mapIndex = [];
+
+    arr.forEach((text, idx) => {
+      const key = `${source}|${target}|${text}`;
+      if (translationCache.has(key)) {
+        results[idx] = translationCache.get(key);
+      } else {
+        toTranslate.push(text);
+        mapIndex.push(idx);
+      }
+    });
+
+    if (toTranslate.length) {
+      const translated = await translateViaGoogle(toTranslate, target, source);
+      translated.forEach((t, j) => {
+        const idx = mapIndex[j];
+        results[idx] = t;
+        const k = `${source}|${target}|${toTranslate[j]}`;
+        translationCache.set(k, t);
+      });
+    }
+
+    for (let i = 0; i < results.length; i++) {
+      if (typeof results[i] === 'undefined' || results[i] === null) {
+        results[i] = arr[i];
+      }
+    }
+
+    res.json({ translations: results });
+  } catch (err) {
+    console.error('translate api error:', err);
+    res.status(500).json({ error: 'internal_error' });
+  }
+});
+
 // Disease data APIs
 app.get('/api/disease/months', async (req, res) => {
   try {

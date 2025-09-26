@@ -9,6 +9,13 @@
     <link rel="stylesheet" href="/css/components.css">
     <link rel="stylesheet" href="/css/community-post.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Hide Google Translate banner and branding */
+        .goog-te-banner-frame { display: none !important; }
+        body { top: 0 !important; }
+        .goog-logo-link { display: none !important; }
+        .goog-te-gadget { height: 0 !important; overflow: hidden !important; }
+    </style>
 </head>
 <body>
     <header class="header">
@@ -110,9 +117,68 @@
         </div>
     </main>
 
+    <div id="google_translate_container" style="display:none;"></div>
+    <script>
+      function googleTranslateElementInit() {
+        try {
+          new google.translate.TranslateElement({
+            pageLanguage: 'en',
+            includedLanguages: 'en,hi,bn,as',
+            autoDisplay: false
+          }, 'google_translate_container');
+        } catch (e) {}
+      }
+    </script>
+    <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
     <div id="alertContainer" class="alert-container"></div>
 
     <script src="/js/main.js"></script>
     <script src="/js/alerts.js"></script>
+    <script>
+      // Override changeLanguage to use Google Translate widget (no API key)
+      window.changeLanguage = function(language) {
+        function applyGoogle() {
+          var combo = document.querySelector('select.goog-te-combo');
+          if (combo) {
+            if (combo.value !== language) {
+              combo.value = language;
+              combo.dispatchEvent(new Event('change'));
+            }
+            try { localStorage.setItem('preferredLang', language); } catch(e) {}
+            return true;
+          }
+          return false;
+        }
+        if (!applyGoogle()) {
+          setTimeout(function() {
+            if (!applyGoogle()) {
+              var currentUrl = new URL(window.location);
+              currentUrl.searchParams.set('lang', language);
+              window.location.href = currentUrl.toString();
+            }
+          }, 500);
+        }
+      };
+
+      document.addEventListener('DOMContentLoaded', function() {
+        try {
+          var preferred = localStorage.getItem('preferredLang');
+          if (preferred && preferred !== 'en') {
+            (function tryApply() {
+              var combo = document.querySelector('select.goog-te-combo');
+              if (combo) {
+                if (combo.value !== preferred) {
+                  combo.value = preferred;
+                  combo.dispatchEvent(new Event('change'));
+                }
+              } else {
+                setTimeout(tryApply, 300);
+              }
+            })();
+          }
+        } catch(e) {}
+      });
+    </script>
     </body>
 </html>
