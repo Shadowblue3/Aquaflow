@@ -37,6 +37,14 @@
                             <option value="hi" <%= language === 'hi' ? 'selected' : '' %>>हिंदी</option>
                             <option value="as" <%= language === 'as' ? 'selected' : '' %>>অসমীয়া</option>
                             <option value="bn" <%= language === 'bn' ? 'selected' : '' %>>বাংলা</option>
+                            <option value="mr" <%= language === 'mr' ? 'selected' : '' %>>मराठी</option>
+                            <option value="te" <%= language === 'te' ? 'selected' : '' %>>తెలుగు</option>
+                            <option value="ta" <%= language === 'ta' ? 'selected' : '' %>>தமிழ்</option>
+                            <option value="gu" <%= language === 'gu' ? 'selected' : '' %>>ગુજરાતી</option>
+                            <option value="ur" <%= language === 'ur' ? 'selected' : '' %>>اردو</option>
+                            <option value="kn" <%= language === 'kn' ? 'selected' : '' %>>ಕನ್ನಡ</option>
+                            <option value="or" <%= language === 'or' ? 'selected' : '' %>>ଓଡ଼ିଆ</option>
+                            <option value="ml" <%= language === 'ml' ? 'selected' : '' %>>മലയാളം</option>
                         </select>
                     </div>
                     <% if (user) { %>
@@ -123,7 +131,7 @@
         try {
           new google.translate.TranslateElement({
             pageLanguage: 'en',
-            includedLanguages: 'en,hi,bn,as',
+            includedLanguages: 'en,hi,bn,as,mr,te,ta,gu,ur,kn,or,ml',
             autoDisplay: false
           }, 'google_translate_container');
         } catch (e) {}
@@ -136,49 +144,78 @@
     <script src="/js/main.js"></script>
     <script src="/js/alerts.js"></script>
     <script>
-      // Override changeLanguage to use Google Translate widget (no API key)
-      window.changeLanguage = function(language) {
-        function applyGoogle() {
-          var combo = document.querySelector('select.goog-te-combo');
-          if (combo) {
-            if (combo.value !== language) {
-              combo.value = language;
-              combo.dispatchEvent(new Event('change'));
-            }
-            try { localStorage.setItem('preferredLang', language); } catch(e) {}
-            return true;
-          }
-          return false;
+      (function() {
+        var rtlLangs = ['ur'];
+        function setDirection(lang) {
+          try {
+            var isRtl = rtlLangs.indexOf(lang) >= 0;
+            document.documentElement.setAttribute('dir', isRtl ? 'rtl' : 'ltr');
+            document.body.style.direction = isRtl ? 'rtl' : 'ltr';
+          } catch(e){}
         }
-        if (!applyGoogle()) {
-          setTimeout(function() {
-            if (!applyGoogle()) {
+        function setCookie(name, value, days) {
+          var d = new Date();
+          d.setTime(d.getTime() + (days*24*60*60*1000));
+          var expires = 'expires=' + d.toUTCString();
+          var path = 'path=/';
+          document.cookie = name + '=' + value + ';' + expires + ';' + path;
+          var host = location.hostname;
+          if (host.indexOf('.') > -1) {
+            var domain = '.' + host.split('.').slice(-2).join('.');
+            document.cookie = name + '=' + value + ';' + expires + ';' + path + ';domain=' + domain;
+          }
+        }
+        function setGTranslateCookie(lang) {
+          var val = '/en/' + (lang || 'en');
+          setCookie('googtrans', val, 365);
+          setCookie('googtrans', val, 365);
+        }
+        function applyWidget(lang) {
+          var combo = document.querySelector('select.goog-te-combo');
+          if (!combo) return false;
+          if (combo.value !== lang) {
+            combo.value = lang;
+            combo.dispatchEvent(new Event('change'));
+          } else {
+            combo.dispatchEvent(new Event('change'));
+          }
+          return true;
+        }
+        window.changeLanguage = function(language) {
+          try { localStorage.setItem('preferredLang', language); } catch(e){}
+          setGTranslateCookie(language);
+          setDirection(language);
+          if (!applyWidget(language)) {
+            var attempts = 0;
+            (function retry(){
+              attempts++;
+              if (applyWidget(language)) return;
+              if (attempts < 10) return setTimeout(retry, 300);
               var currentUrl = new URL(window.location);
               currentUrl.searchParams.set('lang', language);
               window.location.href = currentUrl.toString();
-            }
-          }, 500);
-        }
-      };
-
-      document.addEventListener('DOMContentLoaded', function() {
-        try {
-          var preferred = localStorage.getItem('preferredLang');
-          if (preferred && preferred !== 'en') {
-            (function tryApply() {
-              var combo = document.querySelector('select.goog-te-combo');
-              if (combo) {
-                if (combo.value !== preferred) {
-                  combo.value = preferred;
-                  combo.dispatchEvent(new Event('change'));
-                }
-              } else {
-                setTimeout(tryApply, 300);
-              }
             })();
           }
-        } catch(e) {}
-      });
+        };
+        document.addEventListener('DOMContentLoaded', function() {
+          try {
+            var urlPref = (new URL(window.location)).searchParams.get('lang');
+            var preferred = localStorage.getItem('preferredLang') || urlPref || 'en';
+            var headerSelect = document.getElementById('languageSelect');
+            if (headerSelect && headerSelect.value !== preferred) headerSelect.value = preferred;
+            setGTranslateCookie(preferred);
+            setDirection(preferred);
+            if (preferred && preferred !== 'en') {
+              var tries = 0;
+              (function tryApply(){
+                tries++;
+                if (applyWidget(preferred)) return;
+                if (tries < 15) setTimeout(tryApply, 300);
+              })();
+            }
+          } catch(e){}
+        });
+      })();
     </script>
     </body>
 </html>
