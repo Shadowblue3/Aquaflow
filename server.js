@@ -215,15 +215,7 @@ app.get('/dashboard', requireLogin, async (req, res) => {
   try {
     const language = req.query.lang || 'en';
 
-    // If general public user, render public dashboard
-    if (req.session.user && req.session.user.role === 'general') {
-      return res.render('publicDashboard', {
-        title: 'Dashboard',
-        language,
-        activeTab: 'dashboard'
-      });
-    }
-
+    
     // Compute total cases from Disease_Data
     const agg = await dataModel.aggregate([
       {
@@ -234,8 +226,18 @@ app.get('/dashboard', requireLogin, async (req, res) => {
       }
     ]);
     const totalCases = (agg && agg[0] && agg[0].totalCases) ? agg[0].totalCases : 0;
-
+    
     const stats = { ...mockData.stats, totalCases };
+    // If general public user, render public dashboard
+    if (req.session.user && req.session.user.role === 'general') {
+      return res.render('publicDashboard', {
+        title: 'Dashboard',
+        language,
+        activeTab: 'dashboard',
+        alerts: mockData.alerts,
+        stats
+      });
+    }
 
     res.render('dashboard', {
       title: 'Dashboard',
