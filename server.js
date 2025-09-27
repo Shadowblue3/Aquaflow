@@ -16,6 +16,65 @@ const session = require('express-session');
 const bcrypt = require('bcrypt');
 const nodemailer = require('nodemailer');
 
+// Helper: Send email via SendGrid HTTP API (avoids SMTP connectivity issues on PaaS)
+async function sendViaSendGrid({ from, to, subject, text, html, apiKey, timeoutMs = 15000 }) {
+  return await new Promise((resolve, reject) => {
+    try {
+      const body = {
+        personalizations: [
+          {
+            to: [{ email: to }],
+          },
+        ],
+        from: { email: from },
+        subject,
+        content: [{ type: 'text/plain', value: text || '' }],
+      };
+
+      if (html) {
+        body.content.push({ type: 'text/html', value: html });
+      }
+
+      const payload = JSON.stringify(body);
+
+      const req = https.request(
+        'https://api.sendgrid.com/v3/mail/send',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(payload),
+          },
+          timeout: timeoutMs,
+        },
+        (resp) => {
+          let data = '';
+          resp.on('data', (c) => (data += c.toString()));
+          resp.on('end', () => {
+            if (resp.statusCode === 202) {
+              resolve({ ok: true });
+            } else {
+              console.error('SendGrid API error', resp.statusCode, data);
+              reject(new Error(`sendgrid_http_${resp.statusCode}`));
+            }
+          });
+        }
+      );
+
+      req.on('error', (err) => reject(err));
+      req.on('timeout', () => {
+        try { req.destroy(); } catch (_) {}
+        reject(new Error('sendgrid_timeout'));
+      });
+      req.write(payload);
+      req.end();
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
 // Hardcoded Master credentials (override via env if provided)
 const MASTER_ID = process.env.MASTER_ID;
 const MASTER_PASSWORD = process.env.MASTER_PASSWORD;
@@ -982,33 +1041,6 @@ app.post('/communications/data-change-report', requireLogin, requireRole(['maste
       return res.status(400).json({ success: false, message: 'Missing required fields' });
     }
 
-    // Configure transporter from env (supports fallback to Ethereal in dev)
-    const host = process.env.SMTP_HOST || null;
-    const port = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : (host ? 587 : undefined);
-    const secure = process.env.SMTP_SECURE === 'true' || port === 465;
-    const user = process.env.SMTP_USER || process.env.GMAIL_USER || null;
-    const pass = process.env.SMTP_PASS || process.env.GMAIL_PASS || null;
-
-    let transporter;
-    let usingTestAccount = false;
-
-    if (user && pass) {
-      transporter = host
-        ? nodemailer.createTransport({ host, port, secure, auth: { user, pass } })
-        : nodemailer.createTransport({ service: 'gmail', auth: { user, pass } });
-    } else {
-      // Dev fallback: auto-create an Ethereal test account to avoid hard failure
-      const testAccount = await nodemailer.createTestAccount();
-      transporter = nodemailer.createTransport({
-        host: 'smtp.ethereal.email',
-        port: 587,
-        secure: false,
-        auth: { user: testAccount.user, pass: testAccount.pass }
-      });
-      usingTestAccount = true;
-      console.warn('Email service not configured; using Ethereal test account for preview only.');
-    }
-
     const reporter = req.session.user || {};
     const subject = `Data Change Report - ${diseaseName}`;
 
@@ -1045,20 +1077,88 @@ app.post('/communications/data-change-report', requireLogin, requireRole(['maste
           Email: ${escapeHtml(reporter.email || 'N/A')}</p>
       </div>`;
 
+    const fromEmail = process.env.SMTP_FROM || process.env.SENDGRID_FROM || process.env.GMAIL_USER || process.env.SMTP_USER;
+    const toEmail = process.env.EMAIL_TO || 'saptarshibhunia5@gmail.com';
+
+    // Prefer SendGrid HTTPS API on hosted environments to avoid SMTP timeouts
+    const sendgridKey = process.env.SENDGRID_API_KEY || process.env.SENDGRID_API;
+    if (sendgridKey && fromEmail) {
+      try {
+        console.log('Sending email via SendGrid HTTP API');
+        await sendViaSendGrid({
+          from: fromEmail,
+          to: toEmail,
+          subject,
+          text,
+          html,
+          apiKey: sendgridKey,
+        });
+        return res.json({ success: true, provider: 'sendgrid' });
+      } catch (e) {
+        console.error('SendGrid send error, falling back to SMTP if configured:', e);
+      }
+    }
+
+    // Configure SMTP transporter from env (supports fallback to Ethereal in dev)
+    const host = process.env.SMTP_HOST || null;
+    const port = process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : (host ? 587 : undefined);
+    const secure = process.env.SMTP_SECURE === 'true' || port === 465;
+    const user = process.env.SMTP_USER || process.env.GMAIL_USER || null;
+    const pass = process.env.SMTP_PASS || process.env.GMAIL_PASS || null;
+
+    let transporter;
+    let usingTestAccount = false;
+
+    if (user && pass) {
+      console.log('Sending email via SMTP', { host, port, secure });
+      transporter = host
+        ? nodemailer.createTransport({
+            host,
+            port,
+            secure,
+            auth: { user, pass },
+            connectionTimeout: 15000,
+            greetingTimeout: 10000,
+            socketTimeout: 20000,
+            tls: { rejectUnauthorized: false },
+          })
+        : nodemailer.createTransport({
+            service: 'gmail',
+            auth: { user, pass },
+            connectionTimeout: 15000,
+            greetingTimeout: 10000,
+            socketTimeout: 20000,
+          });
+    } else {
+      // Dev fallback: auto-create an Ethereal test account to avoid hard failure
+      const testAccount = await nodemailer.createTestAccount();
+      transporter = nodemailer.createTransport({
+        host: 'smtp.ethereal.email',
+        port: 587,
+        secure: false,
+        auth: { user: testAccount.user, pass: testAccount.pass },
+        connectionTimeout: 15000,
+        greetingTimeout: 10000,
+        socketTimeout: 20000,
+      });
+      usingTestAccount = true;
+      console.warn('Email service not fully configured; using Ethereal test account for preview only.');
+    }
+
     const mailOptions = {
-      from: process.env.SMTP_FROM || user,
-      to: 'saptarshibhunia5@gmail.com',
+      from: fromEmail || user,
+      to: toEmail,
       subject,
       text,
-      html
+      html,
     };
 
     const info = await transporter.sendMail(mailOptions);
     const previewUrl = nodemailer.getTestMessageUrl(info) || null;
-    if (previewUrl) {
+    if (usingTestAccount && previewUrl) {
       console.log('Ethereal preview URL:', previewUrl);
     }
-    return res.json({ success: true, previewUrl });
+    return res.json({ success: true, previewUrl, provider: usingTestAccount ? 'ethereal' : 'smtp' });
   } catch (err) {
     console.error('data-change-report error:', err);
     return res.status(500).json({ success: false, message: 'Failed to send email' });
